@@ -24,6 +24,11 @@ class BitBadges_SIWBB {
     private $revoke_url = 'https://api.bitbadges.io/api/v0/siwbb/token/revoke';
 
     public function __construct() {
+        // Add this line at the start of the constructor
+        if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         // Initialize plugin
         add_action('init', array($this, 'init'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -49,13 +54,9 @@ class BitBadges_SIWBB {
 
         // Handle admin address update
         add_action('admin_init', array($this, 'handle_admin_address_update'));
-    }
 
-    private function debug_log($message) {
-        // Log to custom file
-        error_log(date('[Y-m-d H:i:s] ') . $message . "\n", 3, BITBADGES_LOG);
-        // Also log to WordPress debug log
-        error_log('BitBadges: ' . $message);
+        // Add action to register plugin assets
+        add_action('init', array($this, 'register_plugin_assets'));
     }
 
     public function init() {
@@ -76,49 +77,91 @@ class BitBadges_SIWBB {
     }
 
     public function register_settings() {
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_client_id');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_client_secret');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_api_key');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_claim_id');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_exclusive_auth');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_show_claim_on_auth');
-        register_setting('bitbadges_siwbb_settings', 'bitbadges_siwbb_admin_key');
+        // Text field settings
+        $text_field_args = array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => ''
+        );
+
+        // Checkbox field settings
+        $checkbox_field_args = array(
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => 'no'
+        );
+
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_client_id',
+            $text_field_args
+        );
+        
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_client_secret',
+            $text_field_args
+        );
+        
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_api_key',
+            $text_field_args
+        );
+        
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_claim_id',
+            $text_field_args
+        );
+        
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_exclusive_auth',
+            $checkbox_field_args
+        );
+        
+        register_setting(
+            'bitbadges_siwbb_settings',
+            'bitbadges_siwbb_show_claim_on_auth',
+            $checkbox_field_args
+        );
+    }
+
+    // Add this helper method for checkbox sanitization
+    public function sanitize_checkbox($input) {
+        return ($input === 'yes') ? 'yes' : 'no';
     }
 
     public function settings_page() {
-        $is_first_login = isset($_GET['first_login']) && $_GET['first_login'] === '1';
-        $admin_address = get_option('bitbadges_siwbb_admin_address');
-        $admin_key = get_option('bitbadges_siwbb_admin_key', wp_generate_password(32, false));
-        if (empty(get_option('bitbadges_siwbb_admin_key'))) {
-            update_option('bitbadges_siwbb_admin_key', $admin_key);
+        // Verify user has proper permissions
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'bitbadges-siwbb'));
         }
-        
-        $admin_url = add_query_arg('admin_access', $admin_key, wp_login_url());
+
+        // Add nonce field for the entire settings form
+        if (isset($_GET['first_login'])) {
+            check_admin_referer('bitbadges_first_login');
+            $is_first_login = sanitize_text_field(wp_unslash($_GET['first_login'])) === '1';
+        } else {
+            $is_first_login = false;
+        }
+
+
         ?>
         <div class="wrap">
             <h2>BitBadges Sign In Settings</h2>
+
+            <?php 
+            // Add nonce field for the entire settings form
+            wp_nonce_field('bitbadges_settings_action', 'bitbadges_settings_nonce'); 
+            ?>
 
             <?php if ($is_first_login): ?>
                 <div class="notice notice-success">
                     <p><strong>Welcome!</strong> You've been automatically set as the administrator because you're the first user to sign in.</p>
                     <p>Your BitBadges address (<code><?php echo esc_html($admin_address); ?></code>) has been recorded as the admin address.</p>
                     <p>Please configure your BitBadges Sign In settings below:</p>
-                </div>
-            <?php endif; ?>
-
-            <?php if (!get_option('bitbadges_siwbb_exclusive_auth')): ?>
-                <div class="notice notice-warning">
-                    <p><strong>Important:</strong> Before enabling exclusive authentication, please save this emergency admin access URL:</p>
-                    <code style="display: block; padding: 10px; background: #f0f0f1; margin: 10px 0;">
-                        <?php echo esc_url($admin_url); ?>
-                    </code>
-                    <p>
-                      You will need this URL to access WordPress admin if something goes wrong with BitBadges authentication.
-                      <br>
-                      <br>
-                      You can also set your BitBadges address as the administrator in the <a href="<?php echo esc_url(admin_url('users.php')); ?>">Users</a> section of WordPress.
-                      1) Sign in with your admin BitBadges address and 2) click the "Set as administrator" button next to your account.
-                    </p>
                 </div>
             <?php endif; ?>
             
@@ -156,7 +199,7 @@ class BitBadges_SIWBB {
                                 value="<?php echo esc_attr(get_option('bitbadges_siwbb_claim_id')); ?>" class="regular-text">
                             <p class="description">Optional: Require users to successfully meet this claim criteria. The claim ID can be found in the URL of the claim page (/claims/claimId).
                               Claims can be created for anything like checking badge ownership, Discord membership, anything! On-demand claims are checked
-                              automatically with no user action required. Standard claims require users to manually complete the claim. Both are supported.
+                              automatically with no user action required. Standard claims require users to manually complete the claim (min 1 time). Both are supported.
                             </p>
                         </td>
                     </tr>
@@ -180,31 +223,39 @@ class BitBadges_SIWBB {
                             <label>
                                 <input type="checkbox" name="bitbadges_siwbb_exclusive_auth" 
                                     value="yes" <?php checked(get_option('bitbadges_siwbb_exclusive_auth'), 'yes'); ?>>
-                                Disable Normal WordPress Login
+                                Disable Normal WordPress Login (Only Allow Sign In with BitBadges)
                             </label>
                             <?php if (!get_option('bitbadges_siwbb_exclusive_auth')): ?>
                                 <p class="description" style="color: #d63638;">
-                                    <strong>Warning:</strong> Make sure you have saved the admin access URL above before enabling this option! This will disable the normal authorization flow (including the default admin login).
+                                    <strong>Warning:</strong> Make sure you have approved a BitBadges account as administrator before proceeding! 
+                                    See instructions.
+                                    If you do not, you will permanently lock yourself out of the WordPress admin console.
+                                    This option will disable the normal authorization flow (causing the default admin login to fail).
                                 </p>
                             <?php endif; ?>
+                            <?php if (!get_option('bitbadges_siwbb_exclusive_auth')): ?>
+                <div class="">
+                    <p><strong>Important:</strong> Before enabling exclusive authentication, please do the following to avoid permanent lockout:</p>
+                    <p>
+                      1) Set up Sign In with BitBadges without exclusive authentication and save the settings.
+                      <br>
+                      2) Sign in with a BitBadges address that you want to use as an admin account.
+                      <br>
+                      3) Sign back in with your admin account.
+                      <br>
+                      4) Set your BitBadges address as the administrator in the <a href="<?php echo esc_url(admin_url('users.php')); ?>">Users</a> section of WordPress. You may need to assign it an email.
+                      <br>
+                      5) Now, you are safe to enable exclusive authentication.
+                      <br>
+                      You will then be able to access the WordPress admin console using your BitBadges account. The previous admin account will no longer work since we exclusively authenticate with BitBadges.
+                    </p>
+                </div>
+            <?php endif; ?>
+                            
                         </td>
                     </tr>
-                    <?php if (get_option('bitbadges_siwbb_exclusive_auth') === 'yes'): ?>
-                        <tr>
-                            <th scope="row">Admin Access URL</th>
-                            <td>
-                                <code style="display: block; padding: 10px; background: #f0f0f1; margin-bottom: 10px;">
-                                    <?php echo esc_url($admin_url); ?>
-                                </code>
-                                <p class="description">
-                                    This URL allows access to the WordPress admin login. 
-                                    <strong>Keep it secure!</strong> 
-                                    You can regenerate it by saving the settings again.
-                                </p>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
                 </table>
+              
                 <?php submit_button(); ?>
             </form>
         </div>
@@ -313,8 +364,8 @@ class BitBadges_SIWBB {
     }
 
     public function add_login_button() {
-        // Default BitBadges logo URL
-        $logo_url = 'https://avatars.githubusercontent.com/u/86890740?s=200&v=4';
+        // Enqueue the images style
+        wp_enqueue_style('bitbadges-siwbb-images');
         ?>
         <div id="bitbadges-login-container">
             <?php if (!get_option('bitbadges_siwbb_exclusive_auth')): ?>
@@ -324,7 +375,7 @@ class BitBadges_SIWBB {
             <?php endif; ?>
             <div class="bitbadges-login-wrapper">
                 <a href="<?php echo esc_url($this->get_authorization_url()); ?>" class="bitbadges-button">
-                    <img src="<?php echo esc_url($logo_url); ?>" alt="BitBadges Logo">
+                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'bitbadges-siwbb'); ?>"></span>
                     <span><?php esc_html_e('Sign in with BitBadges', 'bitbadges-siwbb'); ?></span>
                 </a>
             </div>
@@ -333,6 +384,11 @@ class BitBadges_SIWBB {
     }
 
     private function get_authorization_url() {
+        // Start session if not already started
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $state = wp_create_nonce('bitbadges_auth');
         $_SESSION['bitbadges_auth_state'] = $state;
 
@@ -341,7 +397,8 @@ class BitBadges_SIWBB {
             'redirect_uri' => $this->redirect_uri,
             'response_type' => 'code',
             'state' => $state,
-            'scope' => ''
+            'scope' => '',
+            '_wpnonce' => wp_create_nonce('bitbadges_callback')
         );
 
         // Add claim ID if configured
@@ -358,83 +415,48 @@ class BitBadges_SIWBB {
     }
 
     public function handle_oauth_callback() {
-        if (!isset($_GET['action']) || $_GET['action'] !== 'bitbadges-callback') {
+        if (!isset($_GET['action']) || sanitize_text_field(wp_unslash($_GET['action'])) !== 'bitbadges-callback') {
             return;
-        }
-
-        // Enable error reporting for debugging
-        error_reporting(E_ALL);
-        ini_set('display_errors', 1);
-        ini_set('log_errors', 1);
-        ini_set('error_log', BITBADGES_LOG);
-
-        $this->debug_log('========== Starting New OAuth Callback ==========');
-        $this->debug_log('$_GET: ' . print_r($_GET, true));
-        $this->debug_log('$_POST: ' . print_r($_POST, true));
-        $this->debug_log('$_SESSION: ' . print_r($_SESSION ?? 'No Session', true));
-
-        // Fix malformed callback URL if needed
-        $current_uri = $_SERVER['REQUEST_URI'];
-        $this->debug_log('Original REQUEST_URI: ' . $current_uri);
-        
-        if (strpos($current_uri, '?action=bitbadges-callback?') !== false) {
-            $this->debug_log('Detected malformed callback URL with double question marks');
-            
-            // Replace the second question mark with an ampersand
-            $fixed_uri = str_replace('?action=bitbadges-callback?', '?action=bitbadges-callback&', $current_uri);
-            $this->debug_log('Fixed URI: ' . $fixed_uri);
-            
-            // Parse the query parameters from the fixed URI
-            $parsed_url = parse_url($fixed_uri);
-            parse_str($parsed_url['query'], $query_params);
-            
-            // Update $_GET with the corrected parameters
-            $_GET = array_merge($_GET, $query_params);
-            
-            $this->debug_log('Updated $_GET parameters: ' . print_r($_GET, true));
         }
 
         // Start session if not already started
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
-            $this->debug_log('Started new session');
         }
 
         // Verify state to prevent CSRF
-        if (!isset($_GET['state'])) {
-            $this->debug_log('State parameter missing');
-            wp_die('Invalid authentication request - state parameter missing');
+        if (!isset($_GET['state']) || !isset($_SESSION['bitbadges_auth_state'])) {
+            wp_die(esc_html__('Invalid authentication request - state parameter missing', 'bitbadges-siwbb'));
+        }
+
+        $state = sanitize_text_field(wp_unslash($_GET['state']));
+        if (!wp_verify_nonce($state, 'bitbadges_auth') || $state !== $_SESSION['bitbadges_auth_state']) {
+            wp_die(esc_html__('Invalid authentication request - state verification failed', 'bitbadges-siwbb'));
         }
 
         if (isset($_GET['error'])) {
-            $this->debug_log('OAuth error: ' . $_GET['error']);
-            wp_die('Authentication error: ' . sanitize_text_field($_GET['error']));
+            wp_die(esc_html(sprintf(
+                /* translators: %s: error message */
+                __('Authentication error: %s', 'bitbadges-siwbb'),
+                sanitize_text_field(wp_unslash($_GET['error']))
+            )));
         }
 
         if (!isset($_GET['code'])) {
-            $this->debug_log('No authorization code received');
-            wp_die('No authorization code received');
+            wp_die(esc_html__('No authorization code received', 'bitbadges-siwbb'));
         }
-
-        $this->debug_log('About to exchange code for token');
-        $this->debug_log('Client ID: ' . $this->client_id);
-        $this->debug_log('Redirect URI: ' . $this->redirect_uri);
-        $this->debug_log('API Key present: ' . ($this->api_key ? 'yes' : 'no'));
 
         // Exchange code for token and get user info
-        $token_response = $this->get_access_token($_GET['code']);
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
+        $token_response = $this->get_access_token($code);
         if (!$token_response) {
-            $this->debug_log('Failed to get access token');
-            wp_die('Failed to get access token');
+            wp_die(esc_html__('Failed to get access token', 'bitbadges-siwbb'));
         }
 
-        $this->debug_log('Successfully got token response');
         $this->login_or_create_user($token_response);
     }
 
     private function get_access_token($code) {
-        $this->debug_log('Preparing token request');
-        
         $request_body = array(
             'grant_type' => 'authorization_code',
             'client_id' => $this->client_id,
@@ -442,8 +464,6 @@ class BitBadges_SIWBB {
             'redirect_uri' => $this->redirect_uri,
             'code' => $code
         );
-
-        $this->debug_log('Token request body: ' . print_r($request_body, true));
 
         $response = wp_remote_post($this->token_url, array(
             'headers' => array(
@@ -454,28 +474,16 @@ class BitBadges_SIWBB {
         ));
 
         if (is_wp_error($response)) {
-            $this->debug_log('Token Error: ' . $response->get_error_message());
             return false;
         }
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        $headers = wp_remote_retrieve_headers($response);
         $body = wp_remote_retrieve_body($response);
-
-        $this->debug_log('Token response status: ' . $status_code);
-        $this->debug_log('Token response headers: ' . print_r($headers, true));
-        $this->debug_log('Token response body: ' . $body);
-
         $body_array = json_decode($body, true);
         
         if (!isset($body_array['access_token']) || !isset($body_array['address'])) {
-            $this->debug_log('Invalid token response - missing required fields');
-            $this->debug_log('Expected fields: access_token and address');
-            $this->debug_log('Received fields: ' . print_r(array_keys($body_array), true));
             return false;
         }
 
-        $this->debug_log('Successfully parsed token response');
         return $body_array;
     }
 
@@ -484,8 +492,6 @@ class BitBadges_SIWBB {
         if (empty($claim_id)) {
             return true; // No claim verification needed
         }
-
-        $this->debug_log('Verifying claim success for address: ' . $address . ' and claim ID: ' . $claim_id);
 
         $verify_url = 'https://api.bitbadges.io/api/v0/claims/success/' . $claim_id . '/' . $address;
         
@@ -496,15 +502,12 @@ class BitBadges_SIWBB {
         ));
 
         if (is_wp_error($response)) {
-            $this->debug_log('Claim verification error: ' . $response->get_error_message());
             return false;
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $body_array = json_decode($body, true);
-
-        $this->debug_log('Claim verification response: ' . print_r($body_array, true));
 
         if ($status_code !== 200 || !isset($body_array['successCount'])) {
             return false;
@@ -516,7 +519,6 @@ class BitBadges_SIWBB {
     public function login_or_create_user($token_response) {
         // Extract BitBadges address as username
         $username = sanitize_user($token_response['address']);
-        $this->debug_log('Creating/logging in user with address: ' . $username);
         
         // Create display variations of the address
         $display_name = substr($username, 0, 6) . '...' . substr($username, -4);
@@ -524,8 +526,7 @@ class BitBadges_SIWBB {
         
         // Verify claim success if claim ID is configured
         if (!$this->verify_claim_success($username)) {
-            $this->debug_log('Claim verification failed for user: ' . $username);
-            wp_die('Authentication failed: You must successfully meet the claim criteria.');
+            wp_die(esc_html__('Authentication failed: You must successfully meet the claim criteria.', 'bitbadges-siwbb'));
         }
         
         // Check if user exists
@@ -545,12 +546,10 @@ class BitBadges_SIWBB {
             
             $user_id = wp_insert_user($userdata);
             if (is_wp_error($user_id)) {
-                $this->debug_log('User Creation Error: ' . $user_id->get_error_message());
-                wp_die('Failed to create user');
+                wp_die(esc_html__('Failed to create user', 'bitbadges-siwbb'));
             }
             
             $user = get_user_by('id', $user_id);
-            $this->debug_log('Created new user with ID: ' . $user_id);
         } else {
             // Update existing user's display information
             wp_update_user(array(
@@ -562,13 +561,11 @@ class BitBadges_SIWBB {
         
         // Store the access token in user meta for future use if needed
         update_user_meta($user->ID, 'bitbadges_access_token', $token_response['access_token']);
-        $this->debug_log('Updated user meta with access token');
         
         // Log the user in
         wp_set_current_user($user->ID);
         wp_set_auth_cookie($user->ID);
         
-        $this->debug_log('Successfully logged in user, redirecting to home');
         wp_redirect(home_url());
         exit;
     }
@@ -584,19 +581,16 @@ class BitBadges_SIWBB {
             return $user;
         }
 
-        // Special admin access using a secure parameter
-        $admin_key = get_option('bitbadges_siwbb_admin_key', wp_generate_password(32, false));
-        if (empty(get_option('bitbadges_siwbb_admin_key'))) {
-            update_option('bitbadges_siwbb_admin_key', $admin_key);
-        }
-        
-        if (isset($_GET['admin_access']) && wp_check_password($_GET['admin_access'], $admin_key)) {
-            return $user;
-        }
-
         // Only allow access through BitBadges
-        if (isset($_GET['action']) && $_GET['action'] === 'bitbadges-callback') {
-            return $user;
+        if (isset($_GET['action'])) {
+            $action = sanitize_text_field(wp_unslash($_GET['action']));
+            if ($action === 'bitbadges-callback') {
+                // Verify nonce for callback action
+                if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'bitbadges_callback')) {
+                    return new WP_Error('invalid_nonce', 'Invalid security token.');
+                }
+                return $user;
+            }
         }
         
         // Block all other authentication attempts
@@ -604,20 +598,24 @@ class BitBadges_SIWBB {
     }
 
     public function custom_login_page() {
-        // Allow admin access through the special URL
-        $admin_key = get_option('bitbadges_siwbb_admin_key');
-        if (isset($_GET['admin_access']) && wp_check_password($_GET['admin_access'], $admin_key)) {
-            return; // Show default WordPress login form
-        }
-
         // Don't override the callback handling
-        if (isset($_GET['action']) && $_GET['action'] === 'bitbadges-callback') {
-            return;
-        }
+        if (isset($_GET['action'])) {
+            $action = sanitize_text_field(wp_unslash($_GET['action']));
+            
+            if ($action === 'bitbadges-callback') {
+                if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'bitbadges_callback')) {
+                    wp_die(esc_html__('Invalid callback attempt', 'bitbadges-siwbb'));
+                }
+                return;
+            }
 
-        // Don't override logout
-        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
-            return;
+            // Don't override logout
+            if ($action === 'logout') {
+                if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'log-out')) {
+                    wp_die(esc_html__('Invalid logout attempt', 'bitbadges-siwbb'));
+                }
+                return;
+            }
         }
 
         // Get claim ID for requirements link
@@ -627,6 +625,9 @@ class BitBadges_SIWBB {
         if (ob_get_level()) {
             ob_end_clean();
         }
+
+        // Enqueue the images style
+        wp_enqueue_style('bitbadges-siwbb-images');
 
         ?>
         <!DOCTYPE html>
@@ -735,9 +736,15 @@ class BitBadges_SIWBB {
             <div class="login-container">
                 <div class="login-header">
                     <?php
-                    $logo_url = get_site_icon_url(150);
-                    if ($logo_url) {
-                        echo '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" style="max-width: 150px; height: auto;">';
+                    $site_icon_url = get_site_icon_url(150);
+                    if ($site_icon_url) {
+                        $site_icon_id = get_option('site_icon');
+                        if ($site_icon_id) {
+                            echo wp_get_attachment_image($site_icon_id, array(150, 150), false, array(
+                                'style' => 'max-width: 150px; height: auto;',
+                                'alt' => esc_attr(get_bloginfo('name'))
+                            ));
+                        }
                     }
                     ?>
                     <h1 class="site-title"><?php bloginfo('name'); ?></h1>
@@ -756,10 +763,7 @@ class BitBadges_SIWBB {
                 <?php endif; ?>
 
                 <a href="<?php echo esc_url($this->get_authorization_url()); ?>" class="bitbadges-button">
-                    <?php 
-                    $logo_url = 'https://avatars.githubusercontent.com/u/86890740?s=200&v=4';
-                    ?>
-                    <img class="bitbadges-logo" src="<?php echo esc_url($logo_url); ?>" alt="BitBadges Logo">
+                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'bitbadges-siwbb'); ?>"></span>
                     <span><?php esc_html_e('Sign in with BitBadges', 'bitbadges-siwbb'); ?></span>
                 </a>
 
@@ -791,6 +795,16 @@ class BitBadges_SIWBB {
                 'updated'
             );
         }
+    }
+
+    public function register_plugin_assets() {
+        // Register the BitBadges logo
+        wp_register_style(
+            'bitbadges-siwbb-images',
+            plugin_dir_url(__FILE__) . 'assets/css/images.css',
+            array(),
+            '1.0.0'
+        );
     }
 }
 
