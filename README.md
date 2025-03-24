@@ -2,7 +2,7 @@
 Contributors: bitbadges
 Tags: bitbadges, web3, authentication, nft, siwbb
 Requires at least: 5.0
-Tested up to: 6.5
+Tested up to: 6.7
 Requires PHP: 7.0
 Stable tag: 1.0.0
 License: GPLv2 or later
@@ -13,6 +13,13 @@ This plugin allows users to gate their WordPress site with BitBadges – claims,
 == Description ==
 
 This plugin allows users to gate their site with BitBadges - claims, payments, NFT badges, and more!
+
+**Important Note:** This plugin ONLY handles authentication with BitBadges - it does not restrict access to your site by itself. For restricting access, we recommend using this plugin in conjunction with:
+
+-   [Force Login](https://wordpress.org/plugins/wp-force-login/) - Forces users to log in to view your site
+-   [Restrict Content](https://wordpress.org/plugins/restrict-content/) - Restrict content to logged-in users
+-   [Members](https://wordpress.org/plugins/members/) - Advanced user roles and permissions
+-   Or other plugins that restrict access to your site
 
 == Installation ==
 

@@ -14,6 +14,13 @@ This plugin allows users to gate their WordPress site with BitBadges – claims,
 
 This plugin allows users to gate their site with BitBadges - claims, payments, NFT badges, and more!
 
+**Important Note:** This plugin ONLY handles authentication with BitBadges - it does not restrict access to your site by itself. For restricting access, we recommend using this plugin in conjunction with:
+
+-   [Force Login](https://wordpress.org/plugins/wp-force-login/) - Forces users to log in to view your site
+-   [Restrict Content](https://wordpress.org/plugins/restrict-content/) - Restrict content to logged-in users
+-   [Members](https://wordpress.org/plugins/members/) - Advanced user roles and permissions
+-   Or other plugins that restrict access to your site
+
 == Installation ==
 
 1. Download the plugin files and upload them to your `/wp-content/plugins/` directory

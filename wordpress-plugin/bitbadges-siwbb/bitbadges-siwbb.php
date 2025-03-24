@@ -2,7 +2,13 @@
 /**
  * Plugin Name: Sign In With BitBadges
  * Plugin URI: https://bitbadges.io
- * Description: Allows users to sign in to WordPress using their BitBadges account and gated claims
+ * Description: Allows users to sign in to WordPress using their BitBadges account and gated claims. This plugin ONLY handles authentication - it does not restrict access to your site. For restricting access, we recommend using this plugin in conjunction with:
+ * 
+ * - [Force Login](https://wordpress.org/plugins/wp-force-login/) - Forces users to log in to view your site
+ * - [Restrict Content](https://wordpress.org/plugins/restrict-content/) - Restrict content to logged-in users
+ * - [Members](https://wordpress.org/plugins/members/) - Advanced user roles and permissions
+ * - Or other plugins that restrict access to your site
+ * 
  * Version: 1.0.0
  * Author: BitBadges
  * Author URI: https://bitbadges.io
@@ -147,10 +153,19 @@ class BitBadges_SIWBB {
             $is_first_login = false;
         }
 
-
         ?>
         <div class="wrap">
             <h2>BitBadges Sign In Settings</h2>
+
+            <div class="notice notice-info">
+                <p><strong>Note:</strong> This plugin only handles authentication with BitBadges - it does not restrict access to your site.</p>
+                <p>For restricting access, we recommend using this plugin together with:</p>
+                <ul style="list-style-type: disc; margin-left: 20px;">
+                    <li><a href="https://wordpress.org/plugins/wp-force-login/" target="_blank">Force Login</a> - Forces users to log in to view your site</li>
+                    <li><a href="https://wordpress.org/plugins/restrict-content/" target="_blank">Restrict Content</a> - Restrict content to logged-in users</li>
+                    <li><a href="https://wordpress.org/plugins/members/" target="_blank">Members</a> - Advanced user roles and permissions</li>
+                </ul>
+            </div>
 
             <?php 
             // Add nonce field for the entire settings form
