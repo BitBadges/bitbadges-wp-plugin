@@ -1,5 +1,5 @@
 === Sign In With BitBadges ===
-Contributors: bitbadges
+Contributors: trevormil
 Tags: bitbadges, web3, authentication, nft, siwbb
 Requires at least: 5.0
 Tested up to: 6.7

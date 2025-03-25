@@ -10,8 +10,8 @@
  * - Or other plugins that restrict access to your site
  * 
  * Version: 1.0.0
- * Author: BitBadges
- * Author URI: https://bitbadges.io
+ * Author: BitBadges (trevormil)
+ * Author URI: https://github.com/trevormil
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
