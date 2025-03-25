@@ -10,11 +10,14 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 This plugin allows users to gate their WordPress site with BitBadges – claims, payments, NFT badges, and more!
 
+![Sign In With BitBadges Banner](assets/banner-1544x500.png)
+![Sign In With BitBadges Icon](assets/icon-256x256.png)
+
 == Description ==
 
 This plugin allows users to gate their site with BitBadges - claims, payments, NFT badges, and more!
 
-**Important Note:** This plugin ONLY handles authentication with BitBadges - it does not restrict access to your site by itself. For restricting access, we recommend using this plugin in conjunction with:
+Important Note: This plugin ONLY handles authentication with BitBadges - it does not restrict access to your site by itself. For restricting access, we recommend using this plugin in conjunction with:
 
 -   [Force Login](https://wordpress.org/plugins/wp-force-login/) - Forces users to log in to view your site
 -   [Restrict Content](https://wordpress.org/plugins/restrict-content/) - Restrict content to logged-in users
