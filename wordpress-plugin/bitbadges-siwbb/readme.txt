@@ -24,6 +24,10 @@ Important Note: This plugin ONLY handles authentication with BitBadges - it does
 -   [Members](https://wordpress.org/plugins/members/) - Advanced user roles and permissions
 -   Or other plugins that restrict access to your site
 
+== Translation ==
+
+The Sign In With BitBadges plugin is currently available in English only. The plugin is translation-ready and uses WordPress's internationalization system, making it easy to add support for additional languages in the future.
+
 == Installation ==
 
 1. Download the plugin files and upload them to your `/wp-content/plugins/` directory
@@ -95,3 +99,41 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 -   Improved user display names
 -   Enhanced UI/UX for login button
 -   Added claim visibility options
+
+== External Services ==
+
+This plugin connects to BitBadges (https://bitbadges.io) for authentication and claim verification. BitBadges is a blockchain-based authentication and digital credentials platform.
+
+= Service Endpoints Used =
+
+* Authentication: https://bitbadges.io/siwbb/authorize
+* Token Management: https://api.bitbadges.io/api/v0/siwbb/token
+* Claim Verification: https://api.bitbadges.io/api/v0/claims/success
+
+= Data Transmission =
+
+The plugin transmits the following data to BitBadges servers:
+
+1. During Authentication:
+   * Client ID and Secret (from your BitBadges OAuth app)
+   * Redirect URI (your WordPress login callback URL)
+   * State parameter (for security)
+
+2. During Claim Verification:
+   * User's BitBadges address
+   * Claim ID (if configured)
+   * API key (for authentication)
+
+3. Token Management:
+   * Access tokens are stored in WordPress user meta
+   * Tokens are used to verify user authentication status
+
+No personal user data beyond the BitBadges address is transmitted to our servers. All communication is done over HTTPS.
+
+= Service Documentation =
+
+* Terms of Service: https://bitbadges.io/policies
+* Privacy Policy: https://bitbadges.io/policies
+* Developer Documentation: https://docs.bitbadges.io
+
+BitBadges is required for this plugin to function. Without access to BitBadges services, users will not be able to authenticate or verify claims.

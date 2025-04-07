@@ -9,11 +9,16 @@
  * - [Members](https://wordpress.org/plugins/members/) - Advanced user roles and permissions
  * - Or other plugins that restrict access to your site
  * 
+ * This plugin requires and connects to BitBadges services (https://bitbadges.io) for authentication.
+ * See readme.txt for details about data transmission and privacy policy.
+ * 
  * Version: 1.0.0
  * Author: BitBadges (trevormil)
  * Author URI: https://github.com/trevormil
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: sign-in-with-bitbadges
+ * Domain Path: /languages
  */
 
 if (!defined('ABSPATH')) {
@@ -35,6 +40,9 @@ class BitBadges_SIWBB {
             session_start();
         }
         
+        // Load text domain for translations
+        add_action('init', array($this, 'load_textdomain'));
+        
         // Initialize plugin
         add_action('init', array($this, 'init'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -50,12 +58,27 @@ class BitBadges_SIWBB {
         } else {
             // Add login button to normal WordPress login form
             add_action('login_footer', array($this, 'add_login_button'));
-            add_action('login_enqueue_scripts', array($this, 'add_login_styles'));
+            add_action('login_enqueue_scripts', array($this, 'enqueue_login_styles'));
         }
 
-        // Set up custom error logging
+        // Set up logging directory and file
         if (!defined('BITBADGES_LOG')) {
-            define('BITBADGES_LOG', WP_CONTENT_DIR . '/bitbadges-debug.log');
+            $upload_dir = wp_upload_dir();
+            $bitbadges_dir = trailingslashit($upload_dir['basedir']) . 'bitbadges-siwbb';
+            
+            // Create directory if it doesn't exist
+            if (!file_exists($bitbadges_dir)) {
+                wp_mkdir_p($bitbadges_dir);
+                
+                // Create .htaccess to protect log files
+                $htaccess_content = "Order deny,allow\nDeny from all";
+                file_put_contents($bitbadges_dir . '/.htaccess', $htaccess_content);
+                
+                // Create index.php to prevent directory listing
+                file_put_contents($bitbadges_dir . '/index.php', '<?php // Silence is golden');
+            }
+            
+            define('BITBADGES_LOG', trailingslashit($bitbadges_dir) . 'debug.log');
         }
 
         // Handle admin address update
@@ -63,6 +86,14 @@ class BitBadges_SIWBB {
 
         // Add action to register plugin assets
         add_action('init', array($this, 'register_plugin_assets'));
+    }
+
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            'sign-in-with-bitbadges',
+            false,
+            dirname(plugin_basename(__FILE__)) . '/languages'
+        );
     }
 
     public function init() {
@@ -142,7 +173,7 @@ class BitBadges_SIWBB {
     public function settings_page() {
         // Verify user has proper permissions
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'bitbadges-siwbb'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'sign-in-with-bitbadges'));
         }
 
         // Add nonce field for the entire settings form
@@ -277,105 +308,10 @@ class BitBadges_SIWBB {
         <?php
     }
 
-    public function add_login_styles() {
-        ?>
-        <style type="text/css">
-            body.login #bitbadges-login-container {
-                width: 320px;
-                margin: 20px auto;
-                padding: 0;
-            }
-            
-            body.login .bitbadges-login-wrapper {
-                width: 100%;
-                margin: 0 auto;
-            }
-            
-            body.login .bitbadges-button {
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                width: 100%;
-                background-color: #000000;
-                border: 1px solid #000000;
-                border-radius: 8px;
-                color: white !important;
-                padding: 12px 20px;
-                text-decoration: none;
-                font-size: 14px;
-                line-height: 1.5;
-                cursor: pointer;
-                text-align: center;
-                box-sizing: border-box;
-                transition: all 0.3s ease;
-            }
-            
-            body.login .bitbadges-button:hover {
-                background-color: #333333;
-                border-color: #333333;
-            }
-            
-            body.login .bitbadges-button:focus {
-                box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000000;
-                outline: none;
-            }
-            
-            body.login .bitbadges-button img {
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                border-radius: 4px;
-            }
-            
-            body.login .bitbadges-button span {
-                vertical-align: middle;
-                font-weight: 500;
-            }
-            
-            body.login .bitbadges-divider {
-                margin: 32px 0;
-                text-align: center;
-                position: relative;
-            }
-            
-            body.login .bitbadges-divider:before {
-                content: "";
-                position: absolute;
-                top: 50%;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: #dcdcde;
-            }
-            
-            body.login .bitbadges-divider span {
-                background: #f0f0f1;
-                padding: 0 16px;
-                color: #50575e;
-                font-size: 13px;
-                position: relative;
-                z-index: 1;
-            }
-
-            body.login #loginform {
-                margin-bottom: 24px !important;
-            }
-
-            body.login .bitbadges-login-wrapper {
-                margin-top: 24px !important;
-            }
-
-            /* Match WordPress login form width */
-            @media screen and (max-width: 782px) {
-                body.login #bitbadges-login-container {
-                    width: 100%;
-                    padding: 0 20px;
-                    box-sizing: border-box;
-                }
-            }
-        </style>
-        <?php
+    public function enqueue_login_styles() {
+        // Enqueue both style files
+        wp_enqueue_style('bitbadges-siwbb-images');
+        wp_enqueue_style('bitbadges-siwbb-login');
     }
 
     public function add_login_button() {
@@ -390,8 +326,8 @@ class BitBadges_SIWBB {
             <?php endif; ?>
             <div class="bitbadges-login-wrapper">
                 <a href="<?php echo esc_url($this->get_authorization_url()); ?>" class="bitbadges-button">
-                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'bitbadges-siwbb'); ?>"></span>
-                    <span><?php esc_html_e('Sign in with BitBadges', 'bitbadges-siwbb'); ?></span>
+                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'sign-in-with-bitbadges'); ?>"></span>
+                    <span><?php esc_html_e('Sign in with BitBadges', 'sign-in-with-bitbadges'); ?></span>
                 </a>
             </div>
         </div>
@@ -441,31 +377,31 @@ class BitBadges_SIWBB {
 
         // Verify state to prevent CSRF
         if (!isset($_GET['state']) || !isset($_SESSION['bitbadges_auth_state'])) {
-            wp_die(esc_html__('Invalid authentication request - state parameter missing', 'bitbadges-siwbb'));
+            wp_die(esc_html__('Invalid authentication request - state parameter missing', 'sign-in-with-bitbadges'));
         }
 
         $state = sanitize_text_field(wp_unslash($_GET['state']));
         if (!wp_verify_nonce($state, 'bitbadges_auth') || $state !== $_SESSION['bitbadges_auth_state']) {
-            wp_die(esc_html__('Invalid authentication request - state verification failed', 'bitbadges-siwbb'));
+            wp_die(esc_html__('Invalid authentication request - state verification failed', 'sign-in-with-bitbadges'));
         }
 
         if (isset($_GET['error'])) {
             wp_die(esc_html(sprintf(
                 /* translators: %s: error message */
-                __('Authentication error: %s', 'bitbadges-siwbb'),
+                __('Authentication error: %s', 'sign-in-with-bitbadges'),
                 sanitize_text_field(wp_unslash($_GET['error']))
             )));
         }
 
         if (!isset($_GET['code'])) {
-            wp_die(esc_html__('No authorization code received', 'bitbadges-siwbb'));
+            wp_die(esc_html__('No authorization code received', 'sign-in-with-bitbadges'));
         }
 
         // Exchange code for token and get user info
         $code = sanitize_text_field(wp_unslash($_GET['code']));
         $token_response = $this->get_access_token($code);
         if (!$token_response) {
-            wp_die(esc_html__('Failed to get access token', 'bitbadges-siwbb'));
+            wp_die(esc_html__('Failed to get access token', 'sign-in-with-bitbadges'));
         }
 
         $this->login_or_create_user($token_response);
@@ -541,7 +477,7 @@ class BitBadges_SIWBB {
         
         // Verify claim success if claim ID is configured
         if (!$this->verify_claim_success($username)) {
-            wp_die(esc_html__('Authentication failed: You must successfully meet the claim criteria.', 'bitbadges-siwbb'));
+            wp_die(esc_html__('Authentication failed: You must successfully meet the claim criteria.', 'sign-in-with-bitbadges'));
         }
         
         // Check if user exists
@@ -561,7 +497,7 @@ class BitBadges_SIWBB {
             
             $user_id = wp_insert_user($userdata);
             if (is_wp_error($user_id)) {
-                wp_die(esc_html__('Failed to create user', 'bitbadges-siwbb'));
+                wp_die(esc_html__('Failed to create user', 'sign-in-with-bitbadges'));
             }
             
             $user = get_user_by('id', $user_id);
@@ -619,7 +555,7 @@ class BitBadges_SIWBB {
             
             if ($action === 'bitbadges-callback') {
                 if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'bitbadges_callback')) {
-                    wp_die(esc_html__('Invalid callback attempt', 'bitbadges-siwbb'));
+                    wp_die(esc_html__('Invalid callback attempt', 'sign-in-with-bitbadges'));
                 }
                 return;
             }
@@ -627,7 +563,7 @@ class BitBadges_SIWBB {
             // Don't override logout
             if ($action === 'logout') {
                 if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'log-out')) {
-                    wp_die(esc_html__('Invalid logout attempt', 'bitbadges-siwbb'));
+                    wp_die(esc_html__('Invalid logout attempt', 'sign-in-with-bitbadges'));
                 }
                 return;
             }
@@ -643,6 +579,7 @@ class BitBadges_SIWBB {
 
         // Enqueue the images style
         wp_enqueue_style('bitbadges-siwbb-images');
+        wp_enqueue_style('bitbadges-siwbb-login');
 
         ?>
         <!DOCTYPE html>
@@ -650,102 +587,8 @@ class BitBadges_SIWBB {
         <head>
             <meta charset="<?php bloginfo('charset'); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php esc_html_e('Login - ', 'bitbadges-siwbb'); bloginfo('name'); ?></title>
+            <title><?php esc_html_e('Login - ', 'sign-in-with-bitbadges'); bloginfo('name'); ?></title>
             <?php do_action('login_head'); ?>
-            <style type="text/css">
-                body {
-                    background: #f0f0f1;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-                }
-                .login-container {
-                    max-width: 320px;
-                    margin: 100px auto;
-                    padding: 40px;
-                    background: white;
-                    border-radius: 4px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
-                }
-                .login-header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                }
-                .site-title {
-                    font-size: 20px;
-                    margin: 0 0 10px;
-                }
-                .login-message {
-                    color: #50575e;
-                    margin-bottom: 20px;
-                    text-align: center;
-                }
-                .bitbadges-button {
-                    display: flex !important;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                    width: 100%;
-                    padding: 12px 20px;
-                    background-color: #000000;
-                    border: 1px solid #000000;
-                    border-radius: 8px;
-                    color: white;
-                    text-decoration: none;
-                    text-align: center;
-                    font-size: 14px;
-                    line-height: 1.5;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-sizing: border-box;
-                }
-                .bitbadges-button:hover {
-                    background-color: #333333;
-                    border-color: #333333;
-                }
-                .bitbadges-button:focus {
-                    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000000;
-                    outline: none;
-                }
-                .bitbadges-button img {
-                    width: 32px;
-                    height: 32px;
-                    vertical-align: middle;
-                }
-                .bitbadges-logo {
-                    width: 32px;
-                    height: 32px;
-                    vertical-align: middle;
-                    border-radius: 4px;
-                }
-                .bitbadges-button span {
-                    vertical-align: middle;
-                }
-                .login-footer {
-                    text-align: center;
-                    margin-top: 20px;
-                }
-                .login-footer a {
-                    color: #50575e;
-                    text-decoration: none;
-                }
-                .login-footer a:hover {
-                    color: #135e96;
-                }
-                .claim-requirements {
-                    margin: 15px 0;
-                    text-align: center;
-                    font-size: 13px;
-                }
-                
-                .claim-requirements a {
-                    color: #2271b1;
-                    text-decoration: none;
-                }
-                
-                .claim-requirements a:hover {
-                    color: #135e96;
-                    text-decoration: underline;
-                }
-            </style>
         </head>
         <body class="login">
             <div class="login-container">
@@ -766,7 +609,7 @@ class BitBadges_SIWBB {
                 </div>
                 
                 <div class="login-message">
-                    <?php esc_html_e('Sign in to your account using BitBadges', 'bitbadges-siwbb'); ?>
+                    <?php esc_html_e('Sign in to your account using BitBadges', 'sign-in-with-bitbadges'); ?>
                 </div>
 
                 <?php if (!empty($claim_id)): ?>
@@ -778,13 +621,13 @@ class BitBadges_SIWBB {
                 <?php endif; ?>
 
                 <a href="<?php echo esc_url($this->get_authorization_url()); ?>" class="bitbadges-button">
-                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'bitbadges-siwbb'); ?>"></span>
-                    <span><?php esc_html_e('Sign in with BitBadges', 'bitbadges-siwbb'); ?></span>
+                    <span class="bitbadges-logo" aria-label="<?php esc_attr_e('BitBadges Logo', 'sign-in-with-bitbadges'); ?>"></span>
+                    <span><?php esc_html_e('Sign in with BitBadges', 'sign-in-with-bitbadges'); ?></span>
                 </a>
 
                 <div class="login-footer">
                     <a href="<?php echo esc_url(home_url('/')); ?>">
-                        <?php esc_html_e('← Back to', 'bitbadges-siwbb'); ?> <?php bloginfo('name'); ?>
+                        <?php esc_html_e('← Back to', 'sign-in-with-bitbadges'); ?> <?php bloginfo('name'); ?>
                     </a>
                 </div>
             </div>
@@ -813,10 +656,18 @@ class BitBadges_SIWBB {
     }
 
     public function register_plugin_assets() {
-        // Register the BitBadges logo
+        // Register the BitBadges logo styles - using plugin_dir_url() instead of hardcoding
         wp_register_style(
             'bitbadges-siwbb-images',
             plugin_dir_url(__FILE__) . 'assets/css/images.css',
+            array(),
+            '1.0.0'
+        );
+
+        // Register the login page styles
+        wp_register_style(
+            'bitbadges-siwbb-login',
+            plugin_dir_url(__FILE__) . 'assets/css/login.css',
             array(),
             '1.0.0'
         );

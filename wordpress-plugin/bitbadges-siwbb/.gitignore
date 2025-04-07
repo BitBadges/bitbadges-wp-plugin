@@ -1,0 +1,4 @@
+# Ignore compiled translations
+languages/*.mo
+languages/*.po
+!languages/*.pot 

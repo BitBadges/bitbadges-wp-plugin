@@ -1,0 +1,103 @@
+# Copyright (C) 2025 BitBadges (trevormil)
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Sign In With BitBadges 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/bitbadges-siwbb\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-04-07T14:37:12-04:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.11.0\n"
+"X-Domain: sign-in-with-bitbadges\n"
+
+#. Plugin Name of the plugin
+#: bitbadges-siwbb.php
+msgid "Sign In With BitBadges"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: bitbadges-siwbb.php
+msgid "https://bitbadges.io"
+msgstr ""
+
+#. Description of the plugin
+#: bitbadges-siwbb.php
+msgid "Allows users to sign in to WordPress using their BitBadges account and gated claims. This plugin ONLY handles authentication - it does not restrict access to your site. For restricting access, we recommend using this plugin in conjunction with:"
+msgstr ""
+
+#. Author of the plugin
+#: bitbadges-siwbb.php
+msgid "BitBadges (trevormil)"
+msgstr ""
+
+#. Author URI of the plugin
+#: bitbadges-siwbb.php
+msgid "https://github.com/trevormil"
+msgstr ""
+
+#: bitbadges-siwbb.php:165
+msgid "You do not have sufficient permissions to access this page."
+msgstr ""
+
+#: bitbadges-siwbb.php:318
+#: bitbadges-siwbb.php:613
+msgid "BitBadges Logo"
+msgstr ""
+
+#: bitbadges-siwbb.php:319
+#: bitbadges-siwbb.php:614
+msgid "Sign in with BitBadges"
+msgstr ""
+
+#: bitbadges-siwbb.php:369
+msgid "Invalid authentication request - state parameter missing"
+msgstr ""
+
+#: bitbadges-siwbb.php:374
+msgid "Invalid authentication request - state verification failed"
+msgstr ""
+
+#. translators: %s: error message
+#: bitbadges-siwbb.php:380
+msgid "Authentication error: %s"
+msgstr ""
+
+#: bitbadges-siwbb.php:386
+msgid "No authorization code received"
+msgstr ""
+
+#: bitbadges-siwbb.php:393
+msgid "Failed to get access token"
+msgstr ""
+
+#: bitbadges-siwbb.php:469
+msgid "Authentication failed: You must successfully meet the claim criteria."
+msgstr ""
+
+#: bitbadges-siwbb.php:489
+msgid "Failed to create user"
+msgstr ""
+
+#: bitbadges-siwbb.php:547
+msgid "Invalid callback attempt"
+msgstr ""
+
+#: bitbadges-siwbb.php:555
+msgid "Invalid logout attempt"
+msgstr ""
+
+#: bitbadges-siwbb.php:579
+msgid "Login - "
+msgstr ""
+
+#: bitbadges-siwbb.php:601
+msgid "Sign in to your account using BitBadges"
+msgstr ""
+
+#: bitbadges-siwbb.php:619
+msgid "← Back to"
+msgstr ""
